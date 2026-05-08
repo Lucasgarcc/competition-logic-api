@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('campeonatos', function (Blueprint $table) {
             $table->id();
             $table->string('nome', 120);
+            $table->foreignId('vencedor_id')->nullable()->constrained('times');
             $table->integer('ano');
             $table->date('data_inicio');
             $table->date('data_fim');
