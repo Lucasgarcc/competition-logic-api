@@ -33,16 +33,22 @@ class CampeonatoController extends Controller
         $result = Process::run("python3 " . base_path('teste.py') . " '{$mandante->nome}' '{$visitante->nome}'");
     
         if ($result->successful()) {
+
             $placar = trim($result->output()); 
             [$golsM, $golsV] = explode('-', $placar);
+
+            $golsMInt = (int)$golsM;
+            $golsVInt = (int)$golsV;
+
+            $idVencedor = ($golsMInt > $golsVInt) ? $mandante->id : $visitante->id;
 
             // Cria o registro na tabela partidas
             $partida = Partida::create([
                 'campeonato_id' => $campeonato->id,
                 'time_mandante_id' => $mandante->id,
                 'time_visitante_id' => $visitante->id,
-                'gols_mandante' => (int) $golsM,
-                'gols_visitante' => (int) $golsV,
+                'gols_mandante' => $golsMInt,
+                'gols_visitante' => $golsVInt,      'vencedor_id' => $idVencedor,
                 'fase' => 'quartas',
                 'status' => 'encerrado',
                 'data_partida' => now(),
@@ -52,7 +58,7 @@ class CampeonatoController extends Controller
                 'mensagem' => 'Partida simulada com sucesso!',
                 'confronto' => "{$mandante->nome} {$golsM} x {$golsV} {$visitante->nome}",
                 'detalhes' => $partida,
-                'palcar' => $placar
+                'placar' => $placar
             ]);
     
             return response()->json([
