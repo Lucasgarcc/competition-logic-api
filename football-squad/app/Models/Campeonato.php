@@ -9,7 +9,13 @@ class Campeonato extends Model
 {
     use HasFactory;
     
-    protected $fillable = ['nome', 'vencedor_id'];
+    protected $fillable = [
+        'nome', 
+        'ano',
+        'data_inicio',
+        'data_fim', 
+        'vencedor_id'
+    ];
 
     /**
      * Relacionamento: Um campeonato tem muitas partidas.

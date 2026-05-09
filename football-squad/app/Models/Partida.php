@@ -16,7 +16,7 @@ class Partida extends Model
         'gols_mandante', 
         'gols_visitante', 
         'fase'//ex:'quartas', 'semi', 'final'
-    ]
+    ];
 
     /**
      * Relacionamento: A partida pertence a um campeonato.
