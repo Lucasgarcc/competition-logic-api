@@ -12,11 +12,12 @@ class Partida extends Model
     protected $fillable = [
         'campeonato_id', 
         'time_mandante_id', 
-        'time_visitante_id', 
+        'time_visitante_id',  
+        'vencedor_id',
         'gols_mandante', 
         'gols_visitante', 
         'fase'//ex:'quartas', 'semi', 'final'
-    ]
+    ];
 
     /**
      * Relacionamento: A partida pertence a um campeonato.
