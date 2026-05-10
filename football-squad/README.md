@@ -141,3 +141,26 @@ Tente listar o status das migrações. Se o comando retornar a lista de tabelas 
  php artisan migrate:status
 ```
 
+## Sincronizar o banco remoto com local
+
+1. Usando o modelo .sync-db.example.sh, você cria um arquivo executavél com nome sync-db.sh.
+
+2. Entre no wsl ubuntu, abra o diretorio do arquivo dentro da pasta raiz, rode o comando executavél.
+
+```wsl 
+    chmod +x sync-db.sh
+```
+
+3. Após executá-lo de o seguinte comando para subir aplicação docker
+
+```wsl
+    ./vendor/bin/sail up -d
+```
+
+4. Rode o comando de sincronização 
+
+```wsl
+    ./sync-db.sh
+```
+
+5. Após ter exibido importando e SET..., use qualquer (postman, tablePlus, insominia), para ver dump do remoto ao banco local.
