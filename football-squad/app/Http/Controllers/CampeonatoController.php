@@ -53,7 +53,7 @@ class CampeonatoController extends Controller {
     
         try {
             // Validação de fase
-            Partida::gerarPartida($fase);
+            Partida::gerarPartida($fase, $campeonato->id);
             
             // Identifica quem tem direito de jogar (Memória de Classificados)
             $faseAnterior = match($fase) {
