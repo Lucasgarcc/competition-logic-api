@@ -50,9 +50,11 @@ class Partida extends Model
     /**
      * Valida se ainda é possível criar partidas para uma determinada fase.
      */
-    public static function gerarPartida($fase){
+    public static function gerarPartida($fase, $campeonatoId){
         // Usando self:: para acessar a constante
-        $partidasExistentes = self::where('fase', $fase)->count();
+        $partidasExistentes = self::where('fase', $fase)
+            ->where('campeonato_id', $campeonatoId)
+            ->count();
 
         // Verificamos se a fase existe no array para evitar erro de índice
         if (!isset(self::LIMITES_FASE[$fase])) {
