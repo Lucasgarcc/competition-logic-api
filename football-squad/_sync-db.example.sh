@@ -1,9 +1,11 @@
-# Carrega as variáveis do Neon (ou cole a URL direta aqui)
+#!/bin/bash
+
+# Configurações
 NEON_URL="postgresql://USER:PASSWORD@ep-floral-fire-a5894rst.us-east-2.aws.neon.tech/NAMEDATABASE?sslmode=require&channel_binding=require"
 USER= # usuário do seu .env local
 PASSWORD=  # senha do seu .env local
 
-# Função de carregamento
+# Função de carregamento (Spinner)
 show_spinner() {
     local pid=$1
     local message=$2
@@ -11,22 +13,24 @@ show_spinner() {
     local i=0
     while kill -0 $pid 2>/dev/null; do
         i=$(( (i+1) % 4 ))
-        printf "\r[%c] %s" "${spin:$i:1}" "$message"
+        printf "\r[%c] %s..." "${spin:$i:1}" "$message"
         sleep .1
     done
     printf "\r[✅] %s concluído!     \n" "$message"
 }
 
+echo "--- Iniciando Sincronização ---"
 
-# Executa o dump dentro do container do Sail para garantir que o pg_dump esteja disponível
-./vendor/bin/sail shell -c "pg_dump '$NEON_URL' --clean --if-exists --no-owner --no-privileges -f storage/app/neon_dump.sql"
+# 1. Baixando dados do Neon
+./vendor/bin/sail shell -c "pg_dump '$NEON_URL' --clean --if-exists --no-owner --no-privileges -f storage/app/neon_dump.sql" > /dev/null 2>&1 & 
+# O & acima envia para o background
+pid_dump=$! # Captura o PID do comando anterior
+show_spinner $pid_dump "Baixando dados do Neon"
 
-show_spinner $! "Baixando dados do Neon"
+# 2. Importando para o banco local
+./vendor/bin/sail shell -c "PGPASSWORD='$PASSWORD' psql -h pgsql -U '$USER' -d footballsquad -f storage/app/neon_dump.sql" > /dev/null 2>&1 &
+pid_import=$!
+show_spinner $pid_import "Importando para o banco local (Docker)"
 
-# Importa o arquivo gerado para o banco que o Sail está rodando
-# Usando shell -c para garantir que o psql execute o arquivo e saia
-./vendor/bin/sail shell -c "PGPASSWORD='$PASSWORD' psql -h pgsql -U '$USER' neondb_owner -d footballsquad -f storage/app/neon_dump.sql"
-
-show_spinner $! "🔄 Importando para o Docker local"
-
-echo "✅ Sincronização concluída!"
+echo "------------------------------------"
+echo "✅ Sincronização concluída com sucesso!"

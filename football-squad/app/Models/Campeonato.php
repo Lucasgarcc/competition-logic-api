@@ -21,7 +21,7 @@ class Campeonato extends Model
      * Relacionamento: Um campeonato tem muitas partidas.
      */
     public function partidas() {
-        return $this->hasMany(Partidas::class);
+        return $this->hasMany(Partida::class);
     }
 
     /**
