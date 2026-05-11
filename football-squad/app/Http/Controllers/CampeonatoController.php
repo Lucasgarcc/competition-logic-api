@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use \App\Models\Campeonato;
 use App\Models\Time;
 use App\Models\Partida;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class CampeonatoController extends Controller {
 
         //$fase = $request->input('fase', 'quartas');
      
-        $campeonato = \App\Models\Campeonato::firstOrCreate(
+        $campeonato = Campeonato::firstOrCreate(
             ['nome' => $nomeCampeonato, 'ano' => $anoCampeonato],
             [
                 'data_inicio' => now(),
@@ -49,18 +50,24 @@ class CampeonatoController extends Controller {
         else {
             $fase = 'final';
         }
-
+    
         try {
             // Validação de fase
             Partida::gerarPartida($fase);
-        
+            
             // Identifica quem tem direito de jogar (Memória de Classificados)
             $faseAnterior = match($fase) {
                 'semifinal' => 'quartas',
                 'final'     => 'semifinal',
                 'terceiro_lugar' => 'semifinal',
-                default     => null
+                default  => 'quartas'
             };
+            
+            if ($fase == 'quartas' && Time::count() < 8) {
+                return response()->json([
+                    'erro' => "Não há times disponíveis para a fase: quartas"
+                ], 400);
+            }
 
             // Filtra quem já jogou na fase ATUAL (para não repetir jogo)
             $timesJaJogaramNestaFase = Partida::where('fase', $fase)
@@ -105,7 +112,7 @@ class CampeonatoController extends Controller {
             $times = $queryTimes->inRandomOrder()->take(2)->get();
 
             if ($times->count() < 2) {
-                return response()->json(['erro' => "Não há times disponíveis para a fase: {$fase}"], 400);
+                return response()->json(['erro' => "Não há times suficientes para o confronto na fase: {$fase}"], 400);
             }
     
             $mandante = $times[0];
