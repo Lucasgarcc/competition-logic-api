@@ -19,6 +19,13 @@ class Partida extends Model
         'fase'//ex:'quartas', 'semi', 'final'
     ];
 
+    const LIMITES_FASE = [
+        'quartas'   => 4,
+        'semifinal' => 2,
+        'final'     => 1,
+        'terceiro_lugar' => 1,
+    ];
+
     /**
      * Relacionamento: A partida pertence a um campeonato.
      */
@@ -38,5 +45,25 @@ class Partida extends Model
      */
     public function visitante() {
         return $this->belongsTo(Time::class, 'time_visitante_id');
+    }
+
+    /**
+     * Valida se ainda é possível criar partidas para uma determinada fase.
+     */
+    public static function gerarPartida($fase){
+        // Usando self:: para acessar a constante
+        $partidasExistentes = self::where('fase', $fase)->count();
+
+        // Verificamos se a fase existe no array para evitar erro de índice
+        if (!isset(self::LIMITES_FASE[$fase])) {
+            throw new \Exception("Fase '{$fase} inválida!'");
+            
+        }
+
+        if ($partidasExistentes >= self::LIMITES_FASE[$fase]) {
+            throw new \Exception("Limite de partidas para a fase {$fase} atingido.");
+        }
+        
+        return true;
     }
 }
