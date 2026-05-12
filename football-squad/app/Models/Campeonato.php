@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Campeonato extends Model
 {
@@ -25,9 +27,17 @@ class Campeonato extends Model
     }
 
     /**
-     * Relacionamento: Um campeonato tem um vencedor (time vencedor) 
+     * Relacionamento: Um campeonato tem um vencedor (time vencedor).
      */
     public function vencedor() {
-        return $this->hasMany(Time::class, 'vencedor_id');
+        return $this->belongsTo(Time::class, 'vencedor_id', 'id');
+    }
+
+    /**
+     * Relacionamento: Um campeonato se tem calssificações.
+     */
+    public function estatisticas(): HasMany
+    {
+        return $this->hasMany(Classificacao::class, 'campeonato_id'); // Ou o nome correto do seu model
     }
 }

@@ -164,3 +164,24 @@ Tente listar o status das migrações. Se o comando retornar a lista de tabelas 
 ```
 
 5. Após ter exibido importando e SET..., use qualquer (postman, tablePlus, insominia), para ver dump do remoto ao banco local.
+
+
+## Polular Tabela de Times automatica (Precisa excutar para que fluxo funcione).
+
+1. Execute esse comando no wsl após dar start no docker.
+
+``` 
+    ./vendor/bin/sail artisan db:seed --class=TimeSeeder
+```
+ou 
+``` 
+    ./vendor/bin/sail artisan db:seed
+```
+
+## Executar teste Unitários
+
+1. Entre o diretório raiz e execute esse comando.
+
+```wsl
+ ./vendor/bin/sail test --filter CampeonatoTest
+```

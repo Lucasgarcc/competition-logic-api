@@ -10,13 +10,16 @@ class Partida extends Model
     use HasFactory;
 
     protected $fillable = [
-        'campeonato_id', 
-        'time_mandante_id', 
-        'time_visitante_id',  
+        'campeonato_id',
+        'time_mandante_id',
+        'time_visitante_id',
+        'gols_mandante',
+        'gols_visitante',
         'vencedor_id',
-        'gols_mandante', 
-        'gols_visitante', 
-        'fase'//ex:'quartas', 'semi', 'final'
+        'fase',//ex:'quartas', 'semi', 'final'
+        //'status',
+        'encerrada_em'
+       
     ];
 
     const LIMITES_FASE = [
@@ -36,14 +39,14 @@ class Partida extends Model
     /**
      * Relacionamento: O time que joga em casa (Mandante).
      */
-    public function mandante() {
+    public function timeMandante() {
         return $this->belongsTo(Time::class, 'time_mandante_id');
     }
 
     /**
      * Relacionamente: O time que joga fora (Visitante). 
      */
-    public function visitante() {
+    public function timeVisitante() {
         return $this->belongsTo(Time::class, 'time_visitante_id');
     }
 

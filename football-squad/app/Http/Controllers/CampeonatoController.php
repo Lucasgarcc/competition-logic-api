@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use \App\Models\Campeonato;
 use App\Models\Time;
 use App\Models\Partida;
+use App\Models\Classificacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\DB;
@@ -23,34 +24,37 @@ class CampeonatoController extends Controller {
 
         $nomeCampeonato = $request->input('nome_campeonato', 'Campeonato Padrão');
         $anoCampeonato = $request->input('ano', date('Y'));
+        $campeonatoId = $request->input('campeonato_id');
 
-        //$fase = $request->input('fase', 'quartas');
-     
-        $campeonato = Campeonato::firstOrCreate(
-            ['nome' => $nomeCampeonato, 'ano' => $anoCampeonato],
-            [
-                'data_inicio' => now(),
-                'data_fim' => now()->addDays(30) // ex: dura 1 mês
-            ]
-        );
+        $campeonato = $campeonatoId ? Campeonato::find($campeonatoId) : null;
 
-        $contagemQuartas = Partida::where('campeonato_id', $campeonato->id)->where('fase', 'quartas')->count();
-        $contagemSemi = Partida::where('campeonato_id', $campeonato->id)->where('fase', 'semifinal')->count();
-        $contagemTerceiro = Partida::where('campeonato_id', $campeonato->id)->where('fase', 'terceiro_lugar')->count();
+        if (!$campeonato) {
+            $campeonato = Campeonato::firstOrCreate(
+                ['nome' => $nomeCampeonato, 'ano' => $anoCampeonato],
+                [
+                    'data_inicio' => now(),
+                    'data_fim' => now()->addDays(30)
+                ]
+            );
+        }
 
-        if ($contagemQuartas < 4) {
+        // Determinação da Fase
+        $contagens = Partida::where('campeonato_id', $campeonato->id)
+        ->selectRaw("fase, count(*) as total")
+        ->groupBy('fase')
+        ->pluck('total', 'fase');
+
+        // Lógica de fases baseada no array de contagens
+        if (($contagens['quartas'] ?? 0) < 4) {
             $fase = 'quartas';
-        } 
-        elseif ($contagemSemi < 2) {
+        } elseif (($contagens['semifinal'] ?? 0) < 2) {
             $fase = 'semifinal';
-        }
-        elseif ($contagemTerceiro < 1 ) {
+        } elseif (($contagens['terceiro_lugar'] ?? 0) < 1) {
             $fase = 'terceiro_lugar';
-        }
-        else {
+        } else {
             $fase = 'final';
         }
-    
+        
         try {
             // Validação de fase
             Partida::gerarPartida($fase, $campeonato->id);
@@ -150,18 +154,21 @@ class CampeonatoController extends Controller {
                     'gols_visitante' => $golsVInt,      
                     'vencedor_id' => $idVencedor,
                     'fase' => $fase,
-                    'status' => 'encerrado',
+                    //'status' => 'encerrado',
                     'created_at' => $dataInicio,
                     'encerrada_em' => $dataInicio->copy()->addMinutes(50),
                 ]);
 
                 $this->atualizaEstatisticas($partida);
 
+                $partida->load(['timeMandante', 'timeVisitante']);
+
                 return response()->json([
                     'mensagem' => 'Partida simulada com sucesso!',
                     'confronto' => "{$mandante->nome} {$golsM} x {$golsV} {$visitante->nome}",
                     'detalhes' => $partida,
-                    'placar' => $placar
+                    'placar' => $placar,
+                    'fase_slug' => $fase
                 ]);
             }
             
@@ -193,7 +200,7 @@ class CampeonatoController extends Controller {
             return ($id1 < $id2) ? $id1 : $id2;
         }
 
-        // O desafio foca na pontuação de gols (saldo)
+        // pontuação de gols (saldo)
         if ($stats1->saldo_gols != $stats2->saldo_gols) {
             return ($stats1->saldo_gols > $stats2->saldo_gols) ? $id1 : $id2;
         }
@@ -236,8 +243,8 @@ class CampeonatoController extends Controller {
      */
     private function updateOrCreateStats($timeId, $campeonatoId, $golsPro, $golsContra) {
 
-        // Busca ou inicia um novo registro de classificações 
-        $stats = \App\Models\Classificacao::firstOrNew([
+        // Busca registro de classificações 
+        $stats = Classificacao::firstOrNew([
             'time_id' => $timeId,
             'campeonato_id' => $campeonatoId
         ]);
@@ -261,5 +268,128 @@ class CampeonatoController extends Controller {
         $stats->saldo_gols = $stats->gols_pro - $stats->gols_contra;
 
         $stats->save();
+    }
+
+    /**
+     * Rota de status atual do jogo:
+     * 
+     */
+    public function statusAtual() {
+        $campeonato = Campeonato::latest()->first();
+        
+        if (!$campeonato) {
+            return response()->json(['em_andamento' => false]);
+        }
+    
+        $contagens = Partida::where('campeonato_id', $campeonato->id)
+            ->selectRaw("fase, count(*) as total")
+            ->groupBy('fase')
+            ->pluck('total', 'fase');
+    
+        $emAndamento = true;
+        if (isset($contagens['final']) && $contagens['final'] >= 1) {
+            $emAndamento = false;
+        }
+    
+        //  Busca a última partida para o placar do Front-end
+        $ultimaPartida = Partida::where('campeonato_id', $campeonato->id)
+            ->with(['timeMandante', 'timeVisitante'])
+            ->latest()
+            ->first();
+    
+        //  Busca o ranking 
+        $ranking = Classificacao::where('campeonato_id', $campeonato->id)
+            ->join('times', 'classificacoes.time_id', '=', 'times.id')
+            ->select(
+                'times.nome',
+                'classificacoes.pontos',
+                'classificacoes.vitorias',
+                'classificacoes.empates',
+                'classificacoes.derrotas',
+                'classificacoes.gols_pro',
+                'classificacoes.gols_contra'
+            )
+            ->orderBy('classificacoes.pontos', 'desc')
+            ->orderBy('classificacoes.gols_pro', 'desc')
+            ->get();
+    
+        $historico = Partida::where('campeonato_id', $campeonato->id)
+            ->with(['timeMandante', 'timeVisitante'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    
+        return response()->json([
+            'id' => $campeonato->id,
+            'nome' => $campeonato->nome,
+            'em_andamento' => $emAndamento,
+            'progresso' => $contagens, 
+            'ultima_partida' => $ultimaPartida,
+            'ranking' => $ranking,
+            'historico' => $historico,
+            'detalhes' => [
+                'time_mandante' => $ultimaPartida->timeMandante->nome ?? null,
+                'gols_mandante' => $ultimaPartida->gols_mandante ?? 0,
+                'time_visitante' => $ultimaPartida->timeVisitante->nome ?? null,
+                'gols_visitante' => $ultimaPartida->gols_visitante ?? 0,
+            ]
+        ]);
+    }
+
+    /**
+    * Rota de Galeria de Campeonatos
+    * 
+    */
+    public function index() {
+        $campeonatos = Campeonato::with(['vencedor', 'partidas', 'estatisticas'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+    
+        if (request()->ajax() || request()->wantsJson()) {
+            return response()->json($campeonatos);
+        }
+    
+        return view('layouts.campeonatos', compact('campeonatos'));
+    }
+
+    /**
+     * Rota de Estatísticas
+     * 
+     */
+    public function estatisticasGlobais() {
+
+        // Classificação Acumulada 
+        $classificacaoGeral = DB::table('classificacoes')
+            ->join('times', 'classificacoes.time_id', '=', 'times.id') 
+            ->select(
+                'times.nome',
+                DB::raw('SUM(vitorias + empates + derrotas) as jogos'),
+                DB::raw('SUM(vitorias) as vitorias'),
+                DB::raw('SUM(empates) as empates'),
+                DB::raw('SUM(derrotas) as derrotas'),
+                DB::raw('SUM(pontos) as pontos')
+            )
+            ->groupBy('times.nome')
+            ->orderBy('pontos', 'desc')
+            ->get();
+    
+        // Histórico de todas as partidas 
+        $historicoPartidas = Partida::with(['timeMandante', 'timeVisitante'])
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(function($partida) {
+                return [
+                    'time_mandante' => $partida->timeMandante->nome ?? 'Excluído',
+                    'time_visitante' => $partida->timeVisitante->nome ?? 'Excluído',
+                    'gols_mandante' => $partida->gols_mandante,
+                    'gols_visitante' => $partida->gols_visitante,
+                    'data' => $partida->created_at->format('d/m/Y H:i')
+                ];
+            }); 
+    
+        return response()->json([
+            'classificacaoGeral' => $classificacaoGeral,
+            'historicoPartidas'  => $historicoPartidas
+        ]);
     }
 }
