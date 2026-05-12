@@ -22,10 +22,16 @@ class CampeonatoTest extends TestCase
         Time::factory()->count(7)->create();
 
         // Action
-        $response = $this->get('/simular-partida');
+        //$response = $this->get('/simular-partida-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
+
         // Assert
         $response->assertStatus(400);
         $response->assertJsonFragment(['erro' => 'Não há times disponíveis para a fase: quartas']);
+
         $this->assertDatabaseCount('partidas', 0);
     }
 
@@ -36,8 +42,11 @@ class CampeonatoTest extends TestCase
         Time::factory()->count(10)->create();
 
         // Action
-        $response = $this->get('/simular-partida');
-
+        //$response = $this->get('/simular-partida-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
         // Assert
         $response->assertStatus(200);
         $this->assertDatabaseCount('partidas', 1);
@@ -49,7 +58,11 @@ class CampeonatoTest extends TestCase
     
         Time::factory()->count(8)->create();
 
-        $response = $this->get('/simular-partida');
+        //$response = $this->get('/simular-partida-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseCount('partidas', 1);
@@ -66,7 +79,11 @@ class CampeonatoTest extends TestCase
     {
         Time::factory()->count(8)->create();
 
-        $response = $this->get('/simular-partida');
+        //$response = $this->get('/simular-partida-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
 
         $response->assertStatus(200);
     }
@@ -78,7 +95,11 @@ class CampeonatoTest extends TestCase
         $mandante = $times[0];
         $visitante = $times[1];
 
-        $response = $this->get('/simular-partida');
+        //$response = $this->get('/simular-partida-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
 
         // Pegamos a última partida no banco para saber o placar real que saiu
         $partida = Partida::latest()->first();
@@ -156,7 +177,12 @@ class CampeonatoTest extends TestCase
 
         Time::factory()->count(8)->create();
 
-        $response = $this->get('/simular-partida');
+        // Action
+        //$response = $this->get('/simular-partid-teste');
+        $response = $this->post('/simular-partida', [
+            'nome_campeonato' => 'Campeonato de Teste',
+            'ano' => date('Y')
+        ]);
 
         // Assert: O controller deve retornar 500
 
